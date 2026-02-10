@@ -6,8 +6,6 @@ export async function proxy(req:NextRequest){
     const publicRoutes = ["/login","/register","/api/auth"]
 
     const token = await getToken({req,secret:process.env.AUTH_SECRET})
-    console.log(token)
-    console.log(req.url)
 
     if(token && (pathname.startsWith("/login") || pathname.startsWith("/register"))){
         return NextResponse.redirect(new URL("/",req.url))
