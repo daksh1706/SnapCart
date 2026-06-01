@@ -13,13 +13,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "Password must be at least 6 characters" }, { status: 400 });
         }
 
-        const { data: existUser } = await supabase
+        // Clean query to check if email already exists
+        const { data: existUsers, error: existError } = await supabase
             .from("users")
             .select("id")
-            .eq("email", email)
-            .single();
+            .eq("email", email);
 
-        if (existUser) {
+        if (existError) throw existError;
+
+        if (existUsers && existUsers.length > 0) {
             return NextResponse.json({ message: "Email already exists" }, { status: 400 });
         }
 
