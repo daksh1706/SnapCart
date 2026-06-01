@@ -54,32 +54,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .single()
 
         if (!dbUser) {
-          const { data: newUser } = await supabase
+          await supabase
             .from("users")
             .insert({
               name: user.name,
               email: user.email,
               image: user.image
             })
-            .select()
-            .single()
-          if (newUser) {
-            user.id = newUser.id
-            user.role = newUser.role
-          }
-        } else {
-          user.id = dbUser.id
-          user.role = dbUser.role
         }
       }
       return true
     },
-    jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session }) {
+      // If user is logging in, it's the initial call where 'user' is populated
       if (user) {
-        token.id = user.id
+        // Query the database by email to fetch the correct database UUID and role
+        const { data: dbUser } = await supabase
+          .from("users")
+          .select("id, role")
+          .eq("email", user.email)
+          .single()
+
+        if (dbUser) {
+          token.id = dbUser.id
+          token.role = dbUser.role
+        } else {
+          token.id = user.id
+          token.role = "user"
+        }
         token.name = user.name
         token.email = user.email
-        token.role = user.role
       }
       if (trigger === "update" && session?.role) {
         token.role = session.role
