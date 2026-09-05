@@ -51,7 +51,7 @@ function Checkout() {
   const [position, setPosition] = useState<[number, number] | null>(null);
 
   // Totals
-  const actualDeliveryFee = appliedCoupon?.type === 'free_delivery' ? 0 : (subTotal >= 100 ? 0 : 40);
+  const actualDeliveryFee = appliedCoupon?.discountType === 'free_delivery' ? 0 : (subTotal >= 100 ? 0 : 40);
   const finalPayable = Math.max(0, subTotal + actualDeliveryFee - discountAmount);
 
   useEffect(() => {

@@ -1,15 +1,16 @@
 'use client'
-import { ArrowLeft, ShoppingBasket, Minus, Plus, Trash2, X, Tag, Check, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ShoppingBasket, Minus, Plus, Trash2, X, Tag, Check, Sparkles, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store';
 import { increaseQunatity, decreaseQunatity, removeFromCart } from '@/redux/cartSlice';
-import { applyCoupon, removeCoupon, AVAILABLE_COUPONS } from '@/redux/couponSlice';
+import { setDbCoupons, setAppliedCouponSuccess, setCouponError, removeCoupon } from '@/redux/couponSlice';
 import FreeDeliveryBar from '@/components/FreeDeliveryBar';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 interface IGrocery {
     _id: string;
@@ -26,24 +27,58 @@ interface IGrocery {
 
 function CartPage() {
     const dispatch = useDispatch<AppDispatch>()
-    const { cartData, deliveryFee } = useSelector((state: RootState) => state.cart)
-    const { appliedCoupon, discountAmount, error: couponError } = useSelector((state: RootState) => state.coupon)
+    const { cartData } = useSelector((state: RootState) => state.cart)
+    const { dbCoupons, appliedCoupon, discountAmount, error: couponError } = useSelector((state: RootState) => state.coupon)
     const [selectedItem, setSelectedItem] = useState<IGrocery | null>(null)
     const [couponInput, setCouponInput] = useState('')
+    const [applyingCode, setApplyingCode] = useState(false)
     const router = useRouter()
 
     // Calculate totals
     const subTotal = cartData.reduce((sum, item) => sum + (Number(item.sellingprice) * item.quantity), 0)
     const originalTotal = cartData.reduce((sum, item) => sum + (Number(item.originalprice) * item.quantity), 0)
     const catalogSavings = originalTotal - subTotal
-    const actualDeliveryFee = appliedCoupon?.type === 'free_delivery' ? 0 : (subTotal >= 100 ? 0 : 40)
+    const actualDeliveryFee = appliedCoupon?.discountType === 'free_delivery' ? 0 : (subTotal >= 100 ? 0 : 40)
     const finalBill = Math.max(0, subTotal + actualDeliveryFee - discountAmount)
     const totalSavings = catalogSavings + discountAmount + (subTotal >= 100 ? 40 : 0)
     const totalItems = cartData.reduce((sum, item) => sum + item.quantity, 0)
 
-    const handleApplyCode = (code: string) => {
-        dispatch(applyCoupon({ code, subTotal }))
-        setCouponInput('')
+    // Fetch available coupons from database
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            try {
+                const res = await axios.get('/api/coupons')
+                if (res.data?.coupons) {
+                    dispatch(setDbCoupons(res.data.coupons))
+                }
+            } catch (err) {
+                console.error("Error fetching coupons:", err)
+            }
+        }
+        fetchCoupons()
+    }, [dispatch])
+
+    const handleApplyCode = async (code: string) => {
+        if (!code.trim()) return
+        setApplyingCode(true)
+        try {
+            const res = await axios.post('/api/coupons', {
+                code: code.trim().toUpperCase(),
+                subTotal
+            })
+            if (res.data?.valid) {
+                dispatch(setAppliedCouponSuccess({
+                    coupon: res.data.coupon,
+                    discountAmount: res.data.discountAmount
+                }))
+                setCouponInput('')
+            }
+        } catch (err: any) {
+            const message = err?.response?.data?.message || 'Failed to apply coupon'
+            dispatch(setCouponError(message))
+        } finally {
+            setApplyingCode(false)
+        }
     }
 
     return (
@@ -66,7 +101,7 @@ function CartPage() {
                     Your Shopping Cart 🛒
                 </h1>
                 <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
-                    Review your items, apply promo codes, and proceed to express checkout.
+                    Review your items, apply database coupons (1 use per user), and proceed to express checkout.
                 </p>
             </motion.div>
 
@@ -203,35 +238,46 @@ function CartPage() {
                             </AnimatePresence>
                         </div>
 
-                        {/* Available Coupons Strip */}
+                        {/* Database Coupons Offers Strip */}
                         <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100">
-                            <div className="flex items-center gap-2 mb-3 text-sm font-bold text-gray-800">
-                                <Tag className="w-4 h-4 text-emerald-600" />
-                                <span>Available Coupons & Offers</span>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                                    <Tag className="w-4 h-4 text-emerald-600" />
+                                    <span>Available Store Coupons (1 Use Per User)</span>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                                {AVAILABLE_COUPONS.map((coupon) => {
+                                {dbCoupons.map((coupon) => {
                                     const isApplied = appliedCoupon?.code === coupon.code
+                                    const isUsed = coupon.isUsedByMe || coupon.alreadyUsed
                                     return (
                                         <div
                                             key={coupon.code}
-                                            onClick={() => handleApplyCode(coupon.code)}
-                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                                                isApplied
-                                                    ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
-                                                    : 'bg-gray-50/70 hover:bg-emerald-50/40 border-gray-200'
+                                            onClick={() => {
+                                                if (!isUsed) handleApplyCode(coupon.code)
+                                            }}
+                                            className={`p-3 rounded-2xl border text-left transition-all ${
+                                                isUsed
+                                                    ? 'bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed'
+                                                    : isApplied
+                                                    ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20 cursor-pointer'
+                                                    : 'bg-gray-50/70 hover:bg-emerald-50/40 border-gray-200 cursor-pointer'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="font-mono text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                                                <span className={`font-mono text-xs font-black px-2 py-0.5 rounded-md border ${isUsed ? 'bg-gray-200 text-gray-500 border-gray-300' : 'bg-white text-emerald-700 border-emerald-200'}`}>
                                                     {coupon.code}
                                                 </span>
-                                                {isApplied && (
+                                                {isUsed ? (
+                                                    <span className="text-[10px] font-bold text-gray-500">
+                                                        Already Used
+                                                    </span>
+                                                ) : isApplied ? (
                                                     <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
                                                         <Check className="w-3 h-3" /> Applied
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
                                             <p className="text-[11px] text-gray-600 font-medium line-clamp-2">
                                                 {coupon.description}
@@ -245,17 +291,17 @@ function CartPage() {
                             <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
                                 <input
                                     type="text"
-                                    placeholder="Enter coupon code"
+                                    placeholder="Enter coupon code (e.g. WELCOME50)"
                                     value={couponInput}
                                     onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                                     className="flex-1 uppercase font-mono text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                 />
                                 <button
                                     onClick={() => handleApplyCode(couponInput)}
-                                    disabled={!couponInput.trim()}
-                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                                    disabled={!couponInput.trim() || applyingCode}
+                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-1"
                                 >
-                                    Apply
+                                    {applyingCode ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
                                 </button>
                             </div>
 

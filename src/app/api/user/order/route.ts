@@ -2,12 +2,13 @@ import connectDb from "@/lib/db";
 import emitEventHandler from "@/lib/emitEventHandler";
 import Order from "@/models/order.model";
 import User from "@/models/user.model";
+import Coupon from "@/models/coupon.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
     try {
         await connectDb();
-        const { userId, items, paymentMethod, totalAmount, address } = await req.json();
+        const { userId, items, paymentMethod, totalAmount, address, appliedCoupon } = await req.json();
         
         if (!items || !userId || !paymentMethod || !totalAmount || !address) {
             return NextResponse.json(
@@ -31,6 +32,14 @@ export async function POST(req: NextRequest) {
             totalAmount,
             address
         });
+
+        // If coupon was applied, mark it as used by this user in database
+        if (appliedCoupon) {
+            await Coupon.findOneAndUpdate(
+                { code: appliedCoupon.trim().toUpperCase() },
+                { $addToSet: { usedBy: user._id } }
+            );
+        }
 
         await emitEventHandler("new-order", newOrder);
         
