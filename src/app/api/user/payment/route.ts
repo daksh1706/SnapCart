@@ -31,11 +31,14 @@ export async function POST(req: NextRequest) {
             address
         });
 
+        const origin = req.nextUrl?.origin || process.env.NEXT_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             mode: "payment",
-            success_url: `${process.env.NEXT_BASE_URL}/user/order-success`,
-            cancel_url: `${process.env.NEXT_BASE_URL}/user/order-success`,
+            success_url: `${origin}/user/order-success`,
+            cancel_url: `${origin}/user/order-success`,
+
             line_items: [{
                 price_data: {
                     currency: "inr",
