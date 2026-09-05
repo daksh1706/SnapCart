@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import { authConfig } from "./auth.config"
 import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
@@ -6,6 +7,7 @@ import connectDb from "./lib/db"
 import User from "./models/user.model"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   trustHost: true,
   providers: [
     Credentials({
