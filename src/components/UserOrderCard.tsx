@@ -1,11 +1,14 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import {motion} from "framer-motion"
-import { ChevronDown, ChevronUp, CreditCard, MapPin, Package, Truck, UserCheck } from 'lucide-react'
+import { motion } from "framer-motion"
+import { ChevronDown, ChevronUp, CreditCard, MapPin, Package, RotateCcw, ShoppingBag, Truck, UserCheck } from 'lucide-react'
 import Image from 'next/image'
 import { getSocket } from '@/lib/socket'
 import { IUser } from '@/types/index'
 import { useRouter } from 'next/navigation'
+import { useDispatch } from 'react-redux'
+import { AppDispatch } from '@/redux/store'
+import { addToCart } from '@/redux/cartSlice'
 
 export interface IOrder {
     _id?: string;
@@ -42,149 +45,204 @@ export interface IOrder {
     updatedAt?: string;
 }
 
-function UserOrderCard({order}:{order:IOrder}) {
-    const [expanded,setExpanded] = useState(false)
-    const [status,setStatus] = useState(order.status)
+function UserOrderCard({ order }: { order: IOrder }) {
+    const [expanded, setExpanded] = useState(false)
+    const [status, setStatus] = useState(order.status)
     const router = useRouter()
-    const getStatusColor = (status:string)=>{
+    const dispatch = useDispatch<AppDispatch>()
+
+    const getStatusColor = (status: string) => {
         switch (status) {
             case "pending":
-                return "bg-red-100 text-red-700 border-red-300"
+                return "bg-amber-100 text-amber-800 border-amber-300"
             case "out for delivery":
-                return "bg-yellow-100 text-yellow-700 border-yellow-300"
+                return "bg-blue-100 text-blue-800 border-blue-300"
             case "delivered":
-                return "bg-green-100 text-green-700 border-green-300"
+                return "bg-emerald-100 text-emerald-800 border-emerald-300"
             default:
-                return "bg-gray-100 text-gray-700 border-gray-700"
+                return "bg-gray-100 text-gray-700 border-gray-300"
         }
     }
 
-    useEffect(():any=>{
+    useEffect((): any => {
         const socket = getSocket()
-        socket.on("order-status-update",(data)=>{
-            if(data.orderId == order._id){
-                setStatus(data.status )
+        socket.on("order-status-update", (data) => {
+            if (data.orderId == order._id) {
+                setStatus(data.status)
             }
         })
-        return ()=> socket.off("order-status-update")
-    },[])
+        return () => socket.off("order-status-update")
+    }, [order._id])
 
-  return (
-    <motion.div
-    initial={{opacity:0,y:15}}
-    animate={{opacity:1,y:0}}
-    transition={{duration:0.4}}
-    className='bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden '>
-        <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-gray-100 px-5 py-4 bg-linear-to-r from-green-50 to-white '>
-            <div>
-                <h3 className='text-lg font-semibold text-gray-800'>Order <span className='text-green-700 font-bold'>#{order?._id?.toString().slice(-11)}</span></h3>
-                <p className='text-xs text-gray-500 mt-1'>{new Date(order.createdAt!).toLocaleString()}</p>
-            </div>
-            <div className='flex flex-wrap items-center gap-2'>
-                {status !== "delivered" && <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${order.isPaid ? "bg-green-100 text-green-700 border-green-300" : "bg-red-100 text-red-700 border-red-300"}`}>
-                    {order.isPaid?"Paid":"Unpaid"}
-                </span>}
-                
-                <span className={`px-3 py-1 text-xs font-semibold border rounded-full capitalize ${getStatusColor(status)}`}>
-                    {status}
-                </span>
-            </div>
-        </div>
-        
-        <div className='p-5 space-y-4'>
-            {order.paymentMethod == "cod" ? <div className='flex items-center gap-2 text-gray-700 text-sm'>
-                <Truck size={16} className='text-green-600'/>
-                Cash On Delivery
-                </div> : <div className='flex items-center gap-2 text-gray-700 text-sm'>
-                 <CreditCard size={16} className='text-green-600'/>   
-                 Online Payment
+    const handleReorder = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        order.items.forEach(item => {
+            dispatch(addToCart({
+                _id: item.product || String(Math.random()),
+                name: item.name,
+                category: "Reordered",
+                size: item.size,
+                originalprice: String(Number(item.sellingPrice) * 1.1),
+                sellingprice: item.sellingPrice,
+                unit: item.unit,
+                image: item.image,
+                quantity: item.quantity || 1
+            }))
+        })
+        router.push("/user/cart")
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className='bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden'
+        >
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 px-5 py-4 bg-gradient-to-r from-emerald-50/70 to-white'>
+                <div>
+                    <h3 className='text-sm sm:text-base font-bold text-gray-900'>
+                        Order <span className='text-emerald-700 font-extrabold'>#{order?._id?.toString().slice(-8).toUpperCase()}</span>
+                    </h3>
+                    <p className='text-xs text-gray-400 mt-0.5'>{new Date(order.createdAt!).toLocaleString()}</p>
                 </div>
-            }
-            {order.assignedDeliveryBoy && status!=="delivered" && 
-            <>
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3 text-sm text-gray-700">
-                                <UserCheck className="text-blue-600" size={18} />
-                                <div className="font-semibold text-gray-800">
-                                    <p>Assigned To : <span>{order.assignedDeliveryBoy.name}</span></p>
-                                    <p className="text-xs text-gray-600">📞 +91 {order.assignedDeliveryBoy.mobile}</p>
+                <div className='flex flex-wrap items-center gap-2'>
+                    {status !== "delivered" && (
+                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${order.isPaid ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                            {order.isPaid ? "Paid Online" : "COD (Unpaid)"}
+                        </span>
+                    )}
+
+                    <span className={`px-2.5 py-0.5 text-xs font-bold border rounded-full capitalize ${getStatusColor(status)}`}>
+                        {status}
+                    </span>
+                </div>
+            </div>
+
+            <div className='p-5 space-y-4'>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-gray-600">
+                    <div className='flex items-center gap-2'>
+                        {order.paymentMethod === "cod" ? (
+                            <>
+                                <Truck size={16} className='text-emerald-600' />
+                                <span>Cash On Delivery</span>
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard size={16} className='text-emerald-600' />
+                                <span>Stripe Online Payment</span>
+                            </>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleReorder}
+                        className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-200 transition-all cursor-pointer"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Reorder Items</span>
+                    </button>
+                </div>
+
+                {order.assignedDeliveryBoy && status !== "delivered" && (
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-sm">
+                                <div className="p-2 rounded-xl bg-emerald-600 text-white">
+                                    <UserCheck size={18} />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900">{order.assignedDeliveryBoy.name}</p>
+                                    <p className="text-xs text-gray-500">Delivery Partner</p>
                                 </div>
                             </div>
-                            <a href={`tel:${order.assignedDeliveryBoy.mobile}`} className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 transition ml-2">Call</a>
+                            <a
+                                href={`tel:${order.assignedDeliveryBoy.mobile}`}
+                                className="bg-emerald-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl hover:bg-emerald-700 shadow-xs transition cursor-pointer"
+                            >
+                                Call Partner
+                            </a>
                         </div>
-                        <button className='w-full flex items-center justify-center gap-2 bg-green-600 text-white font-semibold px-4 py-2 rounded-xl shadow hover:bg-green-700 transition' onClick={()=>router.push(`/user/track-order/${order._id?.toString()}`)}><Truck size={18}/>Track Your Order</button>
-            </>
-                        }
-            {/* Address */}
-            <div className='flex items-center gap-2 text-gray-700 text-sm'>
-                <MapPin size={16} className='text-green-600'/>
-                <span>{order.address.fullAddress}, {order.address.city}, {order.address.pincode} </span>
-            </div>
-            {/* Items */}
-            <div className='border-t pt-3 border-gray-200'>
-                <button
-                onClick={()=>(setExpanded(prev=>!prev))}
-                className='w-full flex justify-between items-center text-sm font-medium text-gray-700 hover:text-green-700 transition'
-                >
-                    <span className='flex items-center gap-2'>
-                        <Package size={16} className='text-green-600'/>
-                        {expanded?"Hide Order Items" : `Show ${order.items.length} Items`}
-                    </span>
-                    {expanded ? <ChevronUp size={16} className='text-green-600' /> : <ChevronDown size={16} className='text-green-600'/>}
-                </button>
+                        <button
+                            className='w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold text-xs sm:text-sm py-2.5 rounded-xl shadow-xs hover:shadow-md transition cursor-pointer'
+                            onClick={() => router.push(`/user/track-order/${order._id?.toString()}`)}
+                        >
+                            <Truck size={16} /> Track Live Delivery
+                        </button>
+                    </div>
+                )}
 
-                <motion.div
-                initial={{height:0,opacity:0}}
-                animate={{
-                    height : expanded ? "auto" :0,
-                    opacity : expanded ? 1 :0,
-                }}
-                transition={{duration:0.3}}
-                className='overflow-hidden'
-                >
-                    <div className='mt-3 space-y-3'>
-                        {order.items.map((item,index)=>(
-                            <div
-                            key={index}
-                            className='flex justify-between items-center bg-gray-50 rounded-xl px-3 py-2 hover:bg-gray-100 transition'>
-                                <div className='flex items-center gap-3'>
-                                    <Image 
-                                        src={item.image} 
-                                        alt={item.name}
-                                        width={48} 
-                                        height={48}
-                                        className='rounded-lg object-cover border border-gray-200'
-                                    />
-                                    <div>
-                                        <p className='text-sm font-medium text-gray-800'>{item.name}</p>
-                                        <p className='text-xs text-gray-500'>
-                                            {item.quantity ? `${item.quantity} x ` : 'x'}{item.size} {item.unit}
-                                        </p>
+                {/* Address */}
+                <div className='flex items-start gap-2 text-gray-600 text-xs sm:text-sm bg-gray-50/70 p-3 rounded-2xl'>
+                    <MapPin size={16} className='text-emerald-600 shrink-0 mt-0.5' />
+                    <span>{order.address.fullAddress}, {order.address.city}, {order.address.pincode}</span>
+                </div>
+
+                {/* Items Dropdown */}
+                <div className='border-t pt-3 border-gray-100'>
+                    <button
+                        onClick={() => setExpanded(prev => !prev)}
+                        className='w-full flex justify-between items-center text-xs sm:text-sm font-bold text-gray-700 hover:text-emerald-700 transition cursor-pointer'
+                    >
+                        <span className='flex items-center gap-2'>
+                            <Package size={16} className='text-emerald-600' />
+                            {expanded ? "Hide Items" : `View ${order.items.length} Order Items`}
+                        </span>
+                        {expanded ? <ChevronUp size={16} className='text-emerald-600' /> : <ChevronDown size={16} className='text-emerald-600' />}
+                    </button>
+
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{
+                            height: expanded ? "auto" : 0,
+                            opacity: expanded ? 1 : 0,
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className='overflow-hidden'
+                    >
+                        <div className='mt-3 space-y-2'>
+                            {order.items.map((item, index) => (
+                                <div
+                                    key={index}
+                                    className='flex justify-between items-center bg-gray-50/80 rounded-2xl p-2.5 hover:bg-emerald-50/30 transition'
+                                >
+                                    <div className='flex items-center gap-3'>
+                                        <Image
+                                            src={item.image}
+                                            alt={item.name}
+                                            width={42}
+                                            height={42}
+                                            className='rounded-xl object-cover border border-gray-100'
+                                        />
+                                        <div>
+                                            <p className='text-xs sm:text-sm font-bold text-gray-800'>{item.name}</p>
+                                            <p className='text-[11px] text-gray-400'>
+                                                {item.quantity ? `${item.quantity} x ` : 'x'}{item.size} {item.unit}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className='text-xs sm:text-sm font-extrabold text-emerald-700'>
+                                        ₹{Number(item.sellingPrice) * item.quantity}
                                     </div>
                                 </div>
-                                <div className='text-sm font-semibold text-gray-800'>
-                                    ₹{Number(item.sellingPrice) * item.quantity}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                </div>
 
-            </div>
-            
-            {/* Total Amount */}
-            <div className='border-t pt-3 flex justify-between items-center text-sm font-semibold text-gray-800'>
-                <div className='flex items-center gap-2 text-gray-700 text-sm'>
-                    <Truck size={16} className='text-green-600'/>
-                    <span>Delivery :  <span className='text-green-700 font-semibold capitalize'>{status}</span></span>
+                {/* Total */}
+                <div className='border-t pt-3 border-gray-100 flex justify-between items-center text-xs sm:text-sm font-bold text-gray-800'>
+                    <div className='flex items-center gap-1.5 text-gray-500'>
+                        <Truck size={14} className='text-emerald-600' />
+                        <span>Status: <strong className='text-emerald-700 capitalize'>{status}</strong></span>
+                    </div>
+                    <div>
+                        Grand Total: <span className='text-emerald-700 font-black text-base'>₹{order.totalAmount}</span>
+                    </div>
                 </div>
-                <div>
-                    Total : <span className='text-green-700 font-bold'>₹{order.totalAmount}</span>
-                </div>
             </div>
-        </div>
-    </motion.div>
-  )
+        </motion.div>
+    )
 }
 
 export default UserOrderCard

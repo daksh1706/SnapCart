@@ -1,10 +1,12 @@
 'use client'
-import { ArrowLeft, ShoppingBasket, Minus, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ShoppingBasket, Minus, Plus, Trash2, X, Tag, Check, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store';
 import { increaseQunatity, decreaseQunatity, removeFromCart } from '@/redux/cartSlice';
+import { applyCoupon, removeCoupon, AVAILABLE_COUPONS } from '@/redux/couponSlice';
+import FreeDeliveryBar from '@/components/FreeDeliveryBar';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,302 +26,337 @@ interface IGrocery {
 
 function CartPage() {
     const dispatch = useDispatch<AppDispatch>()
-    const {cartData} = useSelector((state:RootState)=>state.cart)
+    const { cartData, deliveryFee } = useSelector((state: RootState) => state.cart)
+    const { appliedCoupon, discountAmount, error: couponError } = useSelector((state: RootState) => state.coupon)
     const [selectedItem, setSelectedItem] = useState<IGrocery | null>(null)
+    const [couponInput, setCouponInput] = useState('')
     const router = useRouter()
-    
+
     // Calculate totals
-    const total = cartData.reduce((sum, item) => sum + (Number(item.sellingprice) * item.quantity), 0)
+    const subTotal = cartData.reduce((sum, item) => sum + (Number(item.sellingprice) * item.quantity), 0)
     const originalTotal = cartData.reduce((sum, item) => sum + (Number(item.originalprice) * item.quantity), 0)
-    const totalSavings = originalTotal - total
+    const catalogSavings = originalTotal - subTotal
+    const actualDeliveryFee = appliedCoupon?.type === 'free_delivery' ? 0 : (subTotal >= 100 ? 0 : 40)
+    const finalBill = Math.max(0, subTotal + actualDeliveryFee - discountAmount)
+    const totalSavings = catalogSavings + discountAmount + (subTotal >= 100 ? 40 : 0)
     const totalItems = cartData.reduce((sum, item) => sum + item.quantity, 0)
-    
-  return (
-    <div className='w-[95%] sm:w-[90%] md:w-[80%] mx-auto mt-8 mb-24 relative'>
-        <Link href={"/"} className='absolute -top-2 left-0 flex items-center gap-2 text-green-700 hover:text-green-800 font-medium transition-all'>
-            <ArrowLeft size={20} />
-            <span className='hidden sm:inline'>Back to Home</span>
-        </Link>
-        
-        <motion.h2
-            initial={{opacity:0,y:10}}
-            animate={{opacity:1,y:0}}
-            transition={{duration:0.3}}
-            className='text-2xl sm:text-3xl md:text-4xl font-bold text-green-700 text-center mb-10'
-        >
-            Your Shopping Cart 🛒
-        </motion.h2>
-        
-        {cartData.length==0 ?(
-            <motion.div
-                initial={{opacity:0,y:10}}
-                animate={{opacity:1,y:0}}
-                transition={{duration:0.3}}
-                className='text-center py-20 bg-white rounded-2xl shadow-md'
+
+    const handleApplyCode = (code: string) => {
+        dispatch(applyCoupon({ code, subTotal }))
+        setCouponInput('')
+    }
+
+    return (
+        <div className='w-[95%] sm:w-[90%] md:w-[85%] max-w-7xl mx-auto mt-6 mb-24 relative'>
+            <Link
+                href={"/"}
+                className='inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800 font-bold text-xs sm:text-sm transition-all mb-4 bg-emerald-50 px-3.5 py-1.5 rounded-xl border border-emerald-100'
             >
-                <ShoppingBasket className='w-16 h-16 text-gray-400 mx-auto mb-4'/>
-                <p className='text-gray-600 text-lg mb-6'>Your cart is empty. Add some items to continue shopping!</p>
-                <Link href={"/"} className='bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700 transition-all inline-block font-medium'>
-                    Continue Shopping
-                </Link>
+                <ArrowLeft size={16} />
+                <span>Continue Shopping</span>
+            </Link>
+
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className='mb-6'
+            >
+                <h1 className='text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight'>
+                    Your Shopping Cart 🛒
+                </h1>
+                <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
+                    Review your items, apply promo codes, and proceed to express checkout.
+                </p>
             </motion.div>
-        ):(
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-                {/* Cart Items */}
-                <div className='lg:col-span-2 space-y-4'>
-                    <AnimatePresence>
-                        {cartData.map((item)=>{
-                            const itemDiscount = Math.round(((Number(item.originalprice) - Number(item.sellingprice)) / Number(item.originalprice)) * 100)
-                            
-                            return (
-                            <motion.div
-                                key={item._id.toString()}
-                                initial={{opacity:0,y:30}}
-                                animate={{opacity:1,y:0}}
-                                exit={{opacity:0,x:-100}}
-                                transition={{duration:0.3}}
-                                className='flex flex-row items-center gap-3 sm:gap-4 bg-white rounded-2xl shadow-md p-3 sm:p-5 hover:shadow-xl transition-all duration-300 border border-gray-100 relative cursor-pointer'
-                                onClick={() => setSelectedItem(item)}
-                            >
-                                {/* Product Image */}
-                                <div className='relative w-20 h-20 sm:w-28 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-gray-50'>
-                                    <Image 
-                                        src={item.image} 
-                                        alt={item.name} 
-                                        fill 
-                                        className='object-contain p-2 transition-transform duration-300 hover:scale-105'
-                                    />
-                                </div>
-                                
-                                {/* Product Info */}
-                                <div className='flex-1 text-left'>
-                                    <h3 className='text-sm sm:text-lg font-semibold text-gray-800 mb-1 line-clamp-1'>
-                                        {item.name}
-                                    </h3>
-                                    <p className='text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 px-2 sm:px-3 py-1 rounded-full whitespace-nowrap inline-flex items-center gap-0.5 mb-2 w-fit'>
-                                        {item.size} {item.unit}
-                                    </p>
-                                    
-                                    {/* Price Section */}
-                                    <div className='flex flex-col gap-0.5'>
-                                        <div className='flex items-center gap-2'>
-                                            <span className='text-gray-400 line-through text-xs sm:text-sm'>
-                                                ₹{Number(item.originalprice) * item.quantity}
-                                            </span>
-                                            <span className='text-green-700 font-bold text-base sm:text-lg'>
-                                                ₹{Number(item.sellingprice) * item.quantity}
-                                            </span>
-                                            {/* Discount Badge next to price */}
-                                            {itemDiscount > 0 && (
-                                                <span className='bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full'>
-                                                    {itemDiscount}% OFF
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className='flex items-center gap-2 text-xs flex-wrap'>
-                                            <span className='text-gray-500'>₹{item.sellingprice} each</span>
-                                            {itemDiscount > 0 && (
-                                                <span className='text-green-600 font-medium'>
-                                                    Save ₹{(Number(item.originalprice) - Number(item.sellingprice)) * item.quantity}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                {/* Quantity Controls & Remove Button */}
-                                <div className='flex flex-col sm:flex-row items-center gap-2 sm:gap-4' onClick={(e) => e.stopPropagation()}>
-                                    <div className='flex items-center gap-2 sm:gap-3 bg-green-50 border border-green-200 rounded-full py-1.5 px-2 sm:py-2 sm:px-3'>
-                                        <motion.button 
-                                            whileTap={{scale:0.9}}
-                                            onClick={()=>dispatch(decreaseQunatity(item._id))}
-                                            className='w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-700 text-white transition-all'
-                                        >
-                                            <Minus size={14} className='sm:w-4 sm:h-4' />
-                                        </motion.button>
-                                        
-                                        <span className='text-sm font-bold text-gray-800 min-w-20px text-center'>
-                                            {item.quantity}
-                                        </span>
-                                        
-                                        <motion.button 
-                                            whileTap={{scale:0.9}}
-                                            onClick={()=>dispatch(increaseQunatity(item._id))}
-                                            className='w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-700 text-white transition-all'
-                                        >
-                                            <Plus size={14} className='sm:w-4 sm:h-4' />
-                                        </motion.button>
-                                    </div>
-                                    
-                                    {/* Remove Button */}
-                                    <motion.button
-                                        whileTap={{scale:0.9}}
-                                        onClick={()=>dispatch(removeFromCart(item._id))}
-                                        className='w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-all'
-                                        aria-label="Remove item"
-                                    >
-                                        <Trash2 size={16} className='sm:w-[18px] sm:h-[18px]' />
-                                    </motion.button>
-                                </div>
-                            </motion.div>
-                        )})}
-                    </AnimatePresence>
-                </div>
-                
-                {/* Order Summary */}
-                <div className='lg:col-span-1'>
-                    <motion.div
-                        initial={{opacity:0,y:20}}
-                        animate={{opacity:1,y:0}}
-                        transition={{duration:0.4}}
-                        className='bg-white rounded-2xl shadow-md p-6 sticky top-4'
+
+            {cartData.length === 0 ? (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className='text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100 max-w-lg mx-auto p-8'
+                >
+                    <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShoppingBasket className='w-10 h-10' />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Your Cart is Empty</h3>
+                    <p className='text-gray-500 text-sm mb-6'>
+                        Looks like you haven&apos;t added any fresh groceries yet. Discover fresh fruits, vegetables, and essentials now!
+                    </p>
+                    <Link
+                        href={"/"}
+                        className='bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-2xl hover:from-emerald-700 hover:to-green-700 shadow-md font-bold text-sm inline-flex items-center gap-2'
                     >
-                        <h3 className='text-xl font-bold text-gray-800 mb-4'>Order Summary</h3>
-                        
-                        <div className='space-y-3 mb-4'>
-                            <div className='flex justify-between text-gray-600'>
-                                <span>Items ({totalItems})</span>
-                                <span className='line-through'>₹{originalTotal.toFixed(2)}</span>
-                            </div>
-                            <div className='flex justify-between text-green-600 font-medium'>
-                                <span>Discount</span>
-                                <span>-₹{totalSavings.toFixed(2)}</span>
-                            </div>
-                            <div className='flex justify-between text-gray-600'>
-                                <span>Subtotal</span>
-                                <span>₹{total.toFixed(2)}</span>
+                        <span>Start Shopping</span>
+                        <ArrowRight className="w-4 h-4" />
+                    </Link>
+                </motion.div>
+            ) : (
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
+                    {/* Cart Items List */}
+                    <div className='lg:col-span-2 space-y-4'>
+                        {/* Free Delivery Goal Bar */}
+                        <FreeDeliveryBar subTotal={subTotal} threshold={100} />
+
+                        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 space-y-4">
+                            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span className="text-sm font-bold text-gray-800">
+                                    Cart Items ({totalItems})
+                                </span>
+                                <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-lg">
+                                    ⚡ 10-15 Min Delivery
+                                </span>
                             </div>
 
-                            <div className='border-t pt-3 flex justify-between text-lg font-bold text-gray-800'>
-                                <span>Total</span>
-                                <span className='text-green-700'>₹{total.toFixed(2)}</span>
+                            <AnimatePresence>
+                                {cartData.map((item) => {
+                                    const itemDiscount = Math.round(
+                                        ((Number(item.originalprice) - Number(item.sellingprice)) / Number(item.originalprice)) * 100
+                                    )
+
+                                    return (
+                                        <motion.div
+                                            key={item._id.toString()}
+                                            layout
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, x: -50 }}
+                                            transition={{ duration: 0.2 }}
+                                            className='flex items-center gap-3 sm:gap-4 p-3 rounded-2xl bg-gray-50/60 hover:bg-emerald-50/30 transition-all border border-gray-100 cursor-pointer'
+                                            onClick={() => setSelectedItem(item)}
+                                        >
+                                            {/* Product Image */}
+                                            <div className='relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-white border border-gray-100'>
+                                                <Image
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    fill
+                                                    className='object-cover p-1'
+                                                />
+                                            </div>
+
+                                            {/* Product Details */}
+                                            <div className='flex-1 min-w-0'>
+                                                <h3 className='text-xs sm:text-sm font-bold text-gray-900 truncate'>
+                                                    {item.name}
+                                                </h3>
+                                                <p className='text-[11px] text-gray-500 font-medium'>
+                                                    {item.size} {item.unit}
+                                                </p>
+
+                                                <div className='flex items-center gap-2 mt-1'>
+                                                    <span className='text-emerald-700 font-bold text-sm sm:text-base'>
+                                                        ₹{Number(item.sellingprice) * item.quantity}
+                                                    </span>
+                                                    {itemDiscount > 0 && (
+                                                        <span className='text-gray-400 line-through text-xs'>
+                                                            ₹{Number(item.originalprice) * item.quantity}
+                                                        </span>
+                                                    )}
+                                                    {itemDiscount > 0 && (
+                                                        <span className='bg-red-50 text-red-600 text-[10px] font-bold px-1.5 py-0.2 rounded'>
+                                                            {itemDiscount}% off
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Quantity Controls & Delete */}
+                                            <div
+                                                className='flex items-center gap-2 sm:gap-3 shrink-0'
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <div className='flex items-center gap-2 bg-emerald-50 border border-emerald-300 rounded-xl py-1 px-2'>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => dispatch(decreaseQunatity(item._id))}
+                                                        className='w-6 h-6 flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer'
+                                                    >
+                                                        <Minus size={12} />
+                                                    </motion.button>
+
+                                                    <span className='text-xs sm:text-sm font-extrabold text-emerald-950 min-w-16px text-center'>
+                                                        {item.quantity}
+                                                    </span>
+
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => dispatch(increaseQunatity(item._id))}
+                                                        className='w-6 h-6 flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer'
+                                                    >
+                                                        <Plus size={12} />
+                                                    </motion.button>
+                                                </div>
+
+                                                <button
+                                                    onClick={() => dispatch(removeFromCart(item._id))}
+                                                    className='w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer'
+                                                    title="Remove"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Available Coupons Strip */}
+                        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3 text-sm font-bold text-gray-800">
+                                <Tag className="w-4 h-4 text-emerald-600" />
+                                <span>Available Coupons & Offers</span>
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                {AVAILABLE_COUPONS.map((coupon) => {
+                                    const isApplied = appliedCoupon?.code === coupon.code
+                                    return (
+                                        <div
+                                            key={coupon.code}
+                                            onClick={() => handleApplyCode(coupon.code)}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                isApplied
+                                                    ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
+                                                    : 'bg-gray-50/70 hover:bg-emerald-50/40 border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-mono text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                                                    {coupon.code}
+                                                </span>
+                                                {isApplied && (
+                                                    <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
+                                                        <Check className="w-3 h-3" /> Applied
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[11px] text-gray-600 font-medium line-clamp-2">
+                                                {coupon.description}
+                                            </p>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Manual Coupon Input */}
+                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                                <input
+                                    type="text"
+                                    placeholder="Enter coupon code"
+                                    value={couponInput}
+                                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                                    className="flex-1 uppercase font-mono text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                />
+                                <button
+                                    onClick={() => handleApplyCode(couponInput)}
+                                    disabled={!couponInput.trim()}
+                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                                >
+                                    Apply
+                                </button>
+                            </div>
+
+                            {couponError && (
+                                <p className="text-xs text-red-500 mt-2 font-medium">
+                                    {couponError}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Order Summary & Bill Breakdown */}
+                    <div className='lg:col-span-1'>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className='bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sticky top-24 space-y-4'
+                        >
+                            <h3 className='text-lg font-extrabold text-gray-900 border-b border-gray-100 pb-3'>
+                                Bill Details
+                            </h3>
+
+                            <div className='space-y-2.5 text-xs sm:text-sm'>
+                                <div className='flex justify-between text-gray-600'>
+                                    <span>Item Total (Catalog Price)</span>
+                                    <span className='line-through text-gray-400'>₹{originalTotal.toFixed(2)}</span>
+                                </div>
+
+                                <div className='flex justify-between text-gray-700 font-medium'>
+                                    <span>Subtotal</span>
+                                    <span>₹{subTotal.toFixed(2)}</span>
+                                </div>
+
+                                <div className='flex justify-between text-emerald-700 font-semibold'>
+                                    <span>Catalog Discount</span>
+                                    <span>-₹{catalogSavings.toFixed(2)}</span>
+                                </div>
+
+                                {appliedCoupon && (
+                                    <div className='flex justify-between items-center text-emerald-700 font-bold bg-emerald-50 p-2 rounded-xl border border-emerald-200'>
+                                        <div className="flex items-center gap-1">
+                                            <Tag className="w-3.5 h-3.5" />
+                                            <span>Coupon ({appliedCoupon.code})</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span>-₹{discountAmount}</span>
+                                            <button
+                                                onClick={() => dispatch(removeCoupon())}
+                                                className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
+                                                title="Remove Coupon"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className='flex justify-between text-gray-700'>
+                                    <span>Delivery Partner Fee</span>
+                                    {actualDeliveryFee === 0 ? (
+                                        <span className='text-emerald-700 font-bold uppercase'>FREE</span>
+                                    ) : (
+                                        <span>₹{actualDeliveryFee}</span>
+                                    )}
+                                </div>
+
+                                <div className='border-t border-gray-200 pt-3 flex justify-between text-base sm:text-lg font-extrabold text-gray-900'>
+                                    <span>To Pay</span>
+                                    <span className='text-emerald-700 font-black'>₹{finalBill.toFixed(2)}</span>
+                                </div>
+                            </div>
+
                             {totalSavings > 0 && (
-                                <div className='bg-green-50 border border-green-200 rounded-lg p-3 mt-3'>
-                                    <p className='text-green-700 text-sm font-medium text-center'>
-                                        🎉 You're saving ₹{totalSavings.toFixed(2)} on this order!
+                                <div className='bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-3 flex items-center gap-2'>
+                                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <p className='text-emerald-800 text-xs font-bold'>
+                                        🎉 Total Savings: ₹{totalSavings.toFixed(2)} on this order!
                                     </p>
                                 </div>
                             )}
-                        </div>
-                        
-                        <motion.button
-                            whileTap={{scale:0.98}}
-                            className='w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-full transition-all shadow-md hover:shadow-lg mb-4 cursor-pointer'
-                            onClick={()=>router.push("/user/checkout")}
-                        >
-                            Proceed to Checkout
-                        </motion.button>
-                        
-                        <Link 
-                            href="/" 
-                            className='block text-center text-green-600 hover:text-green-700 font-medium transition-colors'
-                        >
-                            Continue Shopping
-                        </Link>
-                    </motion.div>
+
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                className='w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer'
+                                onClick={() => router.push("/user/checkout")}
+                            >
+                                <span>Proceed to Checkout</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </motion.button>
+
+                            <div className="flex items-center justify-center gap-2 text-[11px] text-gray-400 pt-2">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                <span>Safe & Secure SSL Encrypted Checkout</span>
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
-            </div>
-        )}
-
-        {/* Product Modal */}
-        <AnimatePresence>
-            {selectedItem && (
-                <motion.div
-                    initial={{opacity:0}}
-                    animate={{opacity:1}}
-                    exit={{opacity:0}}
-                    className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4'
-                    onClick={() => setSelectedItem(null)}
-                >
-                    <motion.div
-                        initial={{scale:0.9, opacity:0}}
-                        animate={{scale:1, opacity:1}}
-                        exit={{scale:0.9, opacity:0}}
-                        transition={{duration:0.2}}
-                        className='bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto'
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Close Button */}
-                        <button 
-                            onClick={() => setSelectedItem(null)}
-                            className='absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-lg hover:bg-gray-100 transition-all z-10'
-                        >
-                            <X size={20} className='text-gray-600' />
-                        </button>
-
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 p-6'>
-                            {/* Image Section */}
-                            <div className='relative aspect-square bg-gray-50 rounded-xl overflow-hidden'>
-                                <Image src={selectedItem.image} alt={selectedItem.name} fill className='object-contain p-4'/>
-                                {Math.round(((Number(selectedItem.originalprice) - Number(selectedItem.sellingprice)) / Number(selectedItem.originalprice)) * 100) > 0 && (
-                                    <div className='absolute top-4 right-4 bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-md'>
-                                        {Math.round(((Number(selectedItem.originalprice) - Number(selectedItem.sellingprice)) / Number(selectedItem.originalprice)) * 100)}% OFF
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Details Section */}
-                            <div className='flex flex-col'>
-                                <p className='text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide'>{selectedItem.category}</p>
-                                <h2 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-3'>{selectedItem.name}</h2>
-                                
-                                {/* Size Badge */}
-                                <div className='text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full whitespace-nowrap w-fit mb-4'>
-                                    {selectedItem.size} {selectedItem.unit}
-                                </div>
-
-                                {/* Price Section */}
-                                <div className='mb-4'>
-                                    <div className='flex items-center gap-3 mb-1'>
-                                        <span className='text-gray-400 line-through text-lg'>₹{selectedItem.originalprice}</span>
-                                        <span className='text-green-700 font-bold text-3xl'>₹{selectedItem.sellingprice}</span>
-                                    </div>
-                                    <p className='text-green-600 text-sm font-medium'>You save ₹{Number(selectedItem.originalprice) - Number(selectedItem.sellingprice)}</p>
-                                </div>
-
-                                {/* Description */}
-                                {selectedItem.description && (
-                                    <div className='mb-6'>
-                                        <h3 className='text-lg font-semibold text-gray-800 mb-2'>Description</h3>
-                                        <p className='text-gray-600 text-sm leading-relaxed'>{selectedItem.description}</p>
-                                    </div>
-                                )}
-
-                                {/* Add to Cart Section */}
-                                <div className='mt-auto'>
-                                    <motion.div
-                                        initial = {{opacity:0,y:10}}
-                                        animate={{opacity:1,y:0}}
-                                        transition={{duration:0.3}}
-                                        className='flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-full py-3 px-6 gap-4'
-                                    >
-                                        <button 
-                                            className='w-10 h-10 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-700 text-white transition-all' 
-                                            onClick={()=>dispatch(decreaseQunatity(selectedItem._id))}
-                                        >
-                                            <Minus size={20} />
-                                        </button>
-                                        <div className='flex flex-col items-center'>
-                                            <span className='text-xl font-bold text-gray-800'>{selectedItem.quantity}</span>
-                                            <span className='text-xs text-green-600 font-medium'>in cart</span>
-                                        </div>
-                                        <button 
-                                            className='w-10 h-10 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-700 text-white transition-all' 
-                                            onClick={()=>dispatch(increaseQunatity(selectedItem._id))}
-                                        >
-                                            <Plus size={20} />
-                                        </button>
-                                    </motion.div>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                </motion.div>
             )}
-        </AnimatePresence>
-    </div>
-  )
+        </div>
+    )
 }
 
 export default CartPage
