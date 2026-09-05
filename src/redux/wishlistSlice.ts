@@ -20,10 +20,23 @@ const initialState: IWishlistSlice = {
     items: [],
 };
 
+const persistWishlistToStorage = (items: IWishlistItem[]) => {
+    if (typeof window !== "undefined") {
+        try {
+            localStorage.setItem("snapcart_wishlist", JSON.stringify(items));
+        } catch (e) {
+            console.error("Failed to save wishlist to localStorage:", e);
+        }
+    }
+};
+
 const wishlistSlice = createSlice({
     name: "wishlist",
     initialState,
     reducers: {
+        initWishlist: (state, action: PayloadAction<IWishlistItem[]>) => {
+            state.items = action.payload || [];
+        },
         toggleWishlist: (state, action: PayloadAction<IWishlistItem>) => {
             const index = state.items.findIndex(i => i._id === action.payload._id);
             if (index >= 0) {
@@ -31,20 +44,31 @@ const wishlistSlice = createSlice({
             } else {
                 state.items.push(action.payload);
             }
+            persistWishlistToStorage(state.items);
         },
         addToWishlist: (state, action: PayloadAction<IWishlistItem>) => {
             if (!state.items.some(i => i._id === action.payload._id)) {
                 state.items.push(action.payload);
+                persistWishlistToStorage(state.items);
             }
         },
         removeFromWishlist: (state, action: PayloadAction<string>) => {
             state.items = state.items.filter(i => i._id !== action.payload);
+            persistWishlistToStorage(state.items);
         },
         clearWishlist: (state) => {
             state.items = [];
+            persistWishlistToStorage([]);
         }
     }
 });
 
-export const { toggleWishlist, addToWishlist, removeFromWishlist, clearWishlist } = wishlistSlice.actions;
+export const {
+    initWishlist,
+    toggleWishlist,
+    addToWishlist,
+    removeFromWishlist,
+    clearWishlist
+} = wishlistSlice.actions;
+
 export default wishlistSlice.reducer;
