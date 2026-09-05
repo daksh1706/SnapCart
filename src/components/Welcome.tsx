@@ -1,14 +1,23 @@
 'use client'
 import React from 'react'
 import { motion } from "framer-motion"
-import { ArrowRight, Bike, ShoppingBasket } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bike, ShoppingBasket } from 'lucide-react'
+import Link from 'next/link'
 import SnapCartLogo from './SnapCartLogo'
 type propType = {
     nextStep:(s:number) => void
 }
 function Welcome({nextStep}:propType) {
   return (
-    <div className='flex flex-col items-center justify-center min-h-screen text-center p-6 bg-linear-to-b from-green-100 to-white'>
+    <div className='flex flex-col items-center justify-center min-h-screen text-center p-6 bg-linear-to-b from-green-100 to-white relative'>
+        <Link 
+            href="/" 
+            className='absolute top-6 left-6 flex items-center gap-2 text-green-700 hover:text-green-800 transition-colors font-medium text-sm bg-white/80 hover:bg-white px-3 py-1.5 rounded-xl shadow-xs'
+        >
+            <ArrowLeft className='w-4 h-4'/>
+            <span>Home</span>
+        </Link>
+
         <motion.div
         initial={{
             opacity: 0,
@@ -23,7 +32,9 @@ function Welcome({nextStep}:propType) {
         }}
         className='flex items-center justify-center'
         >
-             <SnapCartLogo variant="dark" size="xl" showBadge />
+            <Link href="/" className="hover:scale-105 transition-transform inline-block">
+                <SnapCartLogo variant="dark" size="xl" showBadge />
+            </Link>
         </motion.div>
         
         <motion.p

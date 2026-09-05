@@ -6,6 +6,7 @@ import google from '@/assets/google.png'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import Link from 'next/link'
 import SnapCartLogo from './SnapCartLogo'
 
 type propType = {
@@ -80,7 +81,9 @@ function RegisterForm({ previousStep }: propType) {
                 transition={{ duration: 0.5 }}
                 className='mb-6'
             >
-                <SnapCartLogo variant="dark" size="lg" showBadge />
+                <Link href="/" className="hover:scale-105 transition-transform inline-block">
+                    <SnapCartLogo variant="dark" size="lg" showBadge />
+                </Link>
             </motion.div>
 
             <motion.h1 

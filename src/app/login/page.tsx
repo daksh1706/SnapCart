@@ -1,6 +1,7 @@
 'use client'
 
-import { AlertCircle, EyeIcon, EyeOff, Leaf, Loader2, Lock, LogIn, Mail } from 'lucide-react'
+import Link from 'next/link'
+import { AlertCircle, ArrowLeft, EyeIcon, EyeOff, Leaf, Loader2, Lock, LogIn, Mail } from 'lucide-react'
 import React, { FormEvent, Suspense, useEffect, useState } from 'react'
 import { motion } from "framer-motion"
 import Image from 'next/image'
@@ -83,13 +84,23 @@ function LoginForm() {
 
     return (
         <div className='flex flex-col items-center justify-center min-h-screen px-6 py-10 bg-gradient-to-b from-green-50/50 via-white to-white relative'>
+            <Link 
+                href="/" 
+                className='absolute top-6 left-6 flex items-center gap-2 text-green-700 hover:text-green-800 transition-colors font-medium text-sm bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-xl'
+            >
+                <ArrowLeft className='w-4 h-4'/>
+                <span>Home</span>
+            </Link>
+
             <motion.div
                 initial={{ y: -15, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5 }}
                 className='mb-6'
             >
-                <SnapCartLogo variant="dark" size="lg" showBadge />
+                <Link href="/" className="hover:scale-105 transition-transform inline-block">
+                    <SnapCartLogo variant="dark" size="lg" showBadge />
+                </Link>
             </motion.div>
 
             <motion.h1 
