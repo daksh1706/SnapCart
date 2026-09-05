@@ -209,8 +209,8 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-black text-emerald-700">$3.49</span>
-                    <span className="block text-[10px] text-gray-400 line-through">$4.99</span>
+                    <span className="text-xs font-black text-emerald-700">₹149</span>
+                    <span className="block text-[10px] text-gray-400 line-through">₹199</span>
                   </div>
                 </div>
 
@@ -223,8 +223,8 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-black text-emerald-700">$2.99</span>
-                    <span className="block text-[10px] text-gray-400 line-through">$4.20</span>
+                    <span className="text-xs font-black text-emerald-700">₹129</span>
+                    <span className="block text-[10px] text-gray-400 line-through">₹180</span>
                   </div>
                 </div>
               </div>
