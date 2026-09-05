@@ -6,9 +6,9 @@ import Footer from "@/components/Footer";
 import GeoUpdater from "@/components/GeoUpdater";
 import Nav from "@/components/Nav";
 import UserDashboard from "@/components/UserDashboard";
-import { supabase } from "@/lib/supabase";
-import { mapUser, mapGrocery } from "@/lib/mappers";
-import { IGrocery } from "@/types/index";
+import connectDb from "@/lib/db";
+import User from "@/models/user.model";
+import Grocery from "@/models/grocery.model";
 import { redirect } from "next/navigation";
 
 async function Home(props: {
@@ -23,34 +23,34 @@ async function Home(props: {
     redirect("/login");
   }
 
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", session.user.id)
-    .single();
+  await connectDb();
 
-  if (userError || !userData) {
+  const userDoc = await User.findById(session.user.id);
+  if (!userDoc) {
     redirect("/login");
   }
 
-  const user = mapUser(userData);
+  const user = JSON.parse(JSON.stringify(userDoc));
+
   const inComplete =
     !user.mobile || !user.role || (!user.mobile && user.role === "user");
   if (inComplete) {
     return <EditRoleMobile />;
   }
 
-  let groceryList: IGrocery[] = [];
+  let groceryList = [];
   if (user.role === "user") {
-    let query = supabase.from("groceries").select("*");
+    let query: any = {};
     if (searchParams.q) {
-      const searchStr = `%${searchParams.q}%`;
-      query = query.or(`name.ilike.${searchStr},category.ilike.${searchStr}`);
+      query = {
+        $or: [
+          { name: { $regex: searchParams.q, $options: "i" } },
+          { category: { $regex: searchParams.q, $options: "i" } },
+        ],
+      };
     }
-    const { data: groceriesData, error: groceriesError } = await query;
-    if (!groceriesError && groceriesData) {
-      groceryList = groceriesData.map(mapGrocery);
-    }
+    const groceries = await Grocery.find(query);
+    groceryList = JSON.parse(JSON.stringify(groceries));
   }
 
   return (

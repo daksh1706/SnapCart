@@ -1,22 +1,19 @@
-import { supabase } from "@/lib/supabase";
-import { mapOrder } from "@/lib/mappers";
+import connectDb from "@/lib/db";
+import Order from "@/models/order.model";
+import "@/models/user.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
     try {
-        const { data: orders, error } = await supabase
-            .from("orders")
-            .select(`
-                *,
-                user:users!user_id(*),
-                assigned_delivery_boy:users!assigned_delivery_boy_id(*)
-            `)
-            .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        return NextResponse.json(orders.map(mapOrder), { status: 200 });
+        await connectDb();
+        const orders = await Order.find({}).populate("user assignedDeliveryBoy").sort({ createdAt: -1 });
+        return NextResponse.json(
+            orders, { status: 200 }
+        );
     } catch (error) {
-        return NextResponse.json({ message: `get order error ${error}` }, { status: 500 });
+        return NextResponse.json(
+            { message: `get order error ${error}` },
+            { status: 500 }
+        );
     }
 }

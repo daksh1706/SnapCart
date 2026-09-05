@@ -1,34 +1,32 @@
-import { supabase } from "@/lib/supabase";
-import { mapDeliveryAssignment } from "@/lib/mappers";
-import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import connectDb from "@/lib/db";
+import DeliveryAssignment from "@/models/deliveryAssignment";
+import "@/models/order.model";
+import { NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
-        const { searchParams } = new URL(req.url);
-        const deliveryBoyId = searchParams.get("deliveryBoyId");
-
-        if (!deliveryBoyId) {
-            return NextResponse.json({ message: "deliveryBoyId is required" }, { status: 400 });
-        }
-
-        const { data: activeAssignment, error } = await supabase
-            .from("delivery_assignments")
-            .select(`
-                *,
-                order:orders!order_id(*, user:users!user_id(*))
-            `)
-            .eq("assigned_to", deliveryBoyId)
-            .eq("status", "assigned")
-            .maybeSingle();
-
-        if (error) throw error;
-
+        await connectDb();
+        const session = await auth();
+        const deliveryBoyId = session?.user?.id;
+        const activeAssignment = await DeliveryAssignment.findOne({
+            assignedTo: deliveryBoyId,
+            status: "assigned"
+        }).populate("order").lean();
         if (!activeAssignment) {
-            return NextResponse.json({ message: "no active assignment" }, { status: 404 });
+            return NextResponse.json(
+                { active: false },
+                { status: 200 }
+            );
         }
-
-        return NextResponse.json(mapDeliveryAssignment(activeAssignment), { status: 200 });
+        return NextResponse.json(
+            { active: true, assignment: activeAssignment },
+            { status: 200 }
+        );
     } catch (error) {
-        return NextResponse.json({ message: `get current order error: ${error}` }, { status: 500 });
+        return NextResponse.json(
+            { message: `current order error ${error}` },
+            { status: 500 }
+        );
     }
 }

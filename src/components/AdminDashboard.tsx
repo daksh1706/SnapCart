@@ -1,14 +1,16 @@
 import React from 'react'
 import AdminDashboardClient from './AdminDashboardClient'
-import { supabase } from '@/lib/supabase'
-import { mapOrder, mapUser } from '@/lib/mappers'
+import connectDb from '@/lib/db'
+import Order from '@/models/order.model'
+import User from '@/models/user.model'
 
 async function AdminDashboard() {
-  const { data: ordersData } = await supabase.from("orders").select("*");
-  const { data: usersData } = await supabase.from("users").select("*").eq("role", "user");
+  await connectDb()
+  const ordersData = await Order.find({})
+  const usersData = await User.find({ role: "user" })
 
-  const orders = (ordersData || []).map(mapOrder);
-  const users = (usersData || []).map(mapUser);
+  const orders = JSON.parse(JSON.stringify(ordersData || []))
+  const users = JSON.parse(JSON.stringify(usersData || []))
 
   const today = new Date()
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0))
@@ -24,7 +26,7 @@ async function AdminDashboard() {
 
   // 1. TODAY (Hourly slots)
   const todayChart = [0, 6, 12, 18].map(hour => {
-    const list = orders.filter(o => {
+    const list = orders.filter((o: any) => {
       const d = new Date(o.createdAt);
       return d >= startOfToday && d.getHours() >= hour && d.getHours() < hour + 6;
     });
@@ -37,13 +39,13 @@ async function AdminDashboard() {
     const date = new Date(); date.setDate(date.getDate() - i);
     date.setHours(0, 0, 0, 0);
     const nextDay = new Date(date); nextDay.setDate(nextDay.getDate() + 1);
-    const list = orders.filter(o => new Date(o.createdAt) >= date && new Date(o.createdAt) < nextDay);
+    const list = orders.filter((o: any) => new Date(o.createdAt) >= date && new Date(o.createdAt) < nextDay);
     sevenDaysChart.push({ day: date.toLocaleDateString("en-US", { weekday: "short" }), ...getStats(list) });
   }
 
   // 3. THIS MONTH (Weekly)
   const monthChart = [1, 2, 3, 4, 5].map(week => {
-    const list = orders.filter(o => {
+    const list = orders.filter((o: any) => {
       const d = new Date(o.createdAt);
       const isMonth = d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
       return isMonth && Math.ceil(d.getDate() / 7) === week;
@@ -53,34 +55,35 @@ async function AdminDashboard() {
 
   // 4. THIS YEAR (Monthly)
   const yearChart = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => {
-    const list = orders.filter(o => {
+    const list = orders.filter((o: any) => {
       const d = new Date(o.createdAt);
       return d >= startOfYear && d.getMonth() === i;
     });
     return { day: m, ...getStats(list) };
   });
 
+
   // 5. TOTAL (By Year)
   const currentYear = today.getFullYear();
   const totalChart = [currentYear - 1, currentYear].map(y => {
-    const list = orders.filter(o => new Date(o.createdAt).getFullYear() === y);
+    const list = orders.filter((o: any) => new Date(o.createdAt).getFullYear() === y);
     return { day: y.toString(), ...getStats(list) };
   });
 
   const stats = [
     { title: "Total Orders", value: orders.length },
     { title: "Total Customers", value: users.length },
-    { title: "Pending", value: orders.filter(o => o.status === "pending").length },
+    { title: "Pending", value: orders.filter((o: any) => o.status === "pending").length },
     { title: "Total Revenue", value: getStats(orders).revenue }
   ];
 
   return (
     <AdminDashboardClient 
       earning={{
-        today: getStats(orders.filter(o => new Date(o.createdAt) >= startOfToday)).revenue,
-        sevenDays: getStats(orders.filter(o => new Date(o.createdAt) >= startOfWeek)).revenue,
-        thisMonth: getStats(orders.filter(o => new Date(o.createdAt) >= startOfMonth)).revenue,
-        thisYear: getStats(orders.filter(o => new Date(o.createdAt) >= startOfYear)).revenue,
+        today: getStats(orders.filter((o: any) => new Date(o.createdAt) >= startOfToday)).revenue,
+        sevenDays: getStats(orders.filter((o: any) => new Date(o.createdAt) >= startOfWeek)).revenue,
+        thisMonth: getStats(orders.filter((o: any) => new Date(o.createdAt) >= startOfMonth)).revenue,
+        thisYear: getStats(orders.filter((o: any) => new Date(o.createdAt) >= startOfYear)).revenue,
         total: getStats(orders).revenue
       }}
       stats={stats}

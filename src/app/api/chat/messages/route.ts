@@ -1,17 +1,13 @@
-import { supabase } from "@/lib/supabase";
-import { mapMessage } from "@/lib/mappers";
+import connectDb from "@/lib/db";
+import Message from "@/models/message.model";
+import Order from "@/models/order.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
     try {
+        await connectDb();
         const { roomId } = await req.json();
-
-        const { data: room } = await supabase
-            .from("orders")
-            .select("id")
-            .eq("id", roomId)
-            .single();
-
+        let room = await Order.findById(roomId);
         if (!room) {
             return NextResponse.json(
                 { message: "room not found" },
@@ -19,17 +15,10 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const { data: messages, error } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("room_id", room.id)
-            .order("created_at", { ascending: true });
+        const messages = await Message.find({ roomId: room._id });
 
-        if (error) throw error;
+        return NextResponse.json(messages, { status: 200 });
 
-        const mappedMessages = (messages || []).map(mapMessage);
-
-        return NextResponse.json(mappedMessages, { status: 200 });
     } catch (error) {
         return NextResponse.json(
             { message: `get messages error ${error}` },

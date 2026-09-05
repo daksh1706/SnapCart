@@ -1,36 +1,47 @@
-import { supabase } from "@/lib/supabase";
+import connectDb from "@/lib/db";
 import emitEventHandler from "@/lib/emitEventHandler";
-import { mapOrder } from "@/lib/mappers";
+import Order from "@/models/order.model";
+import User from "@/models/user.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
     try {
+        await connectDb();
         const { userId, items, paymentMethod, totalAmount, address } = await req.json();
-
+        
         if (!items || !userId || !paymentMethod || !totalAmount || !address) {
-            return NextResponse.json({ message: "please send all credentials" }, { status: 400 });
+            return NextResponse.json(
+                { message: "please send all credentials" },
+                { status: 400 }
+            );
         }
-
-        const { data: user } = await supabase.from("users").select("id").eq("id", userId).single();
+        
+        const user = await User.findById(userId);
         if (!user) {
-            return NextResponse.json({ message: "user not found" }, { status: 400 });
+            return NextResponse.json(
+                { message: "user not found" },
+                { status: 400 }
+            );
         }
+        
+        const newOrder = await Order.create({
+            user: userId,
+            items,
+            paymentMethod,
+            totalAmount,
+            address
+        });
 
-        const { data: newOrder, error } = await supabase
-            .from("orders")
-            .insert({ user_id: userId, items, payment_method: paymentMethod, total_amount: totalAmount, address })
-            .select("*, user:users!user_id(*)")
-            .single();
-
-        if (error) throw error;
-
-        await emitEventHandler("new-order", mapOrder(newOrder));
-
+        await emitEventHandler("new-order", newOrder);
+        
         return NextResponse.json(
-            { message: "Order placed successfully", order: mapOrder(newOrder) },
+            { message: "Order placed successfully", order: newOrder },
             { status: 201 }
         );
     } catch (error) {
-        return NextResponse.json({ message: `place order error ${error}` }, { status: 500 });
+        return NextResponse.json(
+            { message: `place order error ${error}` },
+            { status: 500 }
+        );
     }
 }

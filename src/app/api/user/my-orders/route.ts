@@ -1,28 +1,29 @@
 import { auth } from "@/auth";
-import { supabase } from "@/lib/supabase";
-import { mapOrder } from "@/lib/mappers";
+import connectDb from "@/lib/db";
+import Order from "@/models/order.model";
+import "@/models/user.model";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
     try {
+        await connectDb();
         const session = await auth();
-        const { data: orders, error } = await supabase
-            .from("orders")
-            .select(`
-                *,
-                user:users!user_id(*),
-                assigned_delivery_boy:users!assigned_delivery_boy_id(*)
-            `)
-            .eq("user_id", session?.user?.id)
-            .order("created_at", { ascending: false });
-
-        if (error) throw error;
+        const orders = await Order.find({ user: session?.user?.id }).populate("user assignedDeliveryBoy").sort({ createdAt: -1 });
         if (!orders) {
-            return NextResponse.json({ message: "order not found" }, { status: 400 });
+            return NextResponse.json(
+                { message: "order not found" },
+                { status: 400 }
+            );
         }
-
-        return NextResponse.json(orders.map(mapOrder), { status: 200 });
+        
+        return NextResponse.json(
+            orders,
+            { status: 200 }
+        );
     } catch (error) {
-        return NextResponse.json({ message: `get all orders error : ${error}` }, { status: 500 });
+        return NextResponse.json(
+            { message: `get all orders error : ${error}` },
+            { status: 500 }
+        );
     }
 }

@@ -1,8 +1,8 @@
 import React from 'react'
 import DeliveryBoyDashboard from '@/components/DeliveryBoyDashboard'
 import { auth } from '@/auth'
-import { supabase } from '@/lib/supabase'
-import { mapOrder } from '@/lib/mappers'
+import connectDb from '@/lib/db'
+import Order from '@/models/order.model'
 
 function getDateRanges() {
   const now = new Date();
@@ -30,26 +30,26 @@ export default async function DeliveryPage() {
     }} />;
   }
 
-  const { data: ordersData } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("assigned_delivery_boy_id", deliveryBoyId)
-    .eq("delivery_otp_verification", true);
+  await connectDb();
+  const ordersData = await Order.find({
+    assignedDeliveryBoy: deliveryBoyId,
+    deliveryOtpVerification: true
+  });
 
-  const orders = (ordersData || []).map(mapOrder);
+  const orders = JSON.parse(JSON.stringify(ordersData || []));
 
   const { today, weekStart, monthStart, yearStart } = getDateRanges();
   const rate = 40;
 
   const calc = (start: Date) => {
-    const filtered = orders.filter(o => new Date(o.updatedAt) >= start);
+    const filtered = orders.filter((o: any) => new Date(o.updatedAt) >= start);
     return { deliveries: filtered.length, earnings: filtered.length * rate };
   };
 
   // Weekly Data (Last 7 Days)
   const weeklyData = Array.from({length: 7}, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
-    const count = orders.filter(o => new Date(o.updatedAt).toDateString() === d.toDateString()).length;
+    const count = orders.filter((o: any) => new Date(o.updatedAt).toDateString() === d.toDateString()).length;
     return { day: d.toLocaleDateString('en-US', {weekday: 'short'}), earnings: count * rate };
   });
 
@@ -57,7 +57,7 @@ export default async function DeliveryPage() {
   const monthlyData = Array.from({length: 4}, (_, i) => {
     const end = new Date(); end.setDate(end.getDate() - (i * 7));
     const start = new Date(); start.setDate(start.getDate() - ((i + 1) * 7));
-    const count = orders.filter(o => {
+    const count = orders.filter((o: any) => {
       const date = new Date(o.updatedAt);
       return date > start && date <= end;
     }).length;
