@@ -5,7 +5,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const publicRoutes = ["/login", "/register", "/api/auth"];
 
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET });
 
   if (token && (pathname.startsWith("/login") || pathname.startsWith("/register"))) {
     return NextResponse.redirect(new URL("/", req.url));
