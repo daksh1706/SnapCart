@@ -15,7 +15,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (publicRoutes.some((path) => pathname.startsWith(path))) {
+  if (pathname === "/" || publicRoutes.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
