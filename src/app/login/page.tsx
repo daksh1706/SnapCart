@@ -22,17 +22,20 @@ function LoginForm() {
     useEffect(() => {
         const errorParam = searchParams.get("error")
         if (errorParam) {
-            if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback" || errorParam === "Configuration") {
-                setErrorMessage("Google Sign-In failed. Please ensure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are configured in .env.local.")
+            if (errorParam === "Configuration") {
+                setErrorMessage("Server configuration error. Please check environment variables on Vercel.")
+            } else if (errorParam === "AccessDenied") {
+                setErrorMessage("Access denied. You do not have permission to sign in.")
             } else if (errorParam === "CredentialsSignin") {
                 setErrorMessage("Invalid email or password.")
-            } else if (errorParam === "CallbackRouteError") {
-                setErrorMessage("Authentication server error. Check database or auth configuration.")
+            } else if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback" || errorParam === "CallbackRouteError") {
+                setErrorMessage("Sign-in failed. Please try again.")
             } else {
                 setErrorMessage(`Authentication error: ${errorParam}`)
             }
         }
     }, [searchParams])
+
 
     const handleLogin = async (e: FormEvent) => {
         e.preventDefault()

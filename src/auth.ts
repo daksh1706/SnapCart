@@ -61,18 +61,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: "user"
           })
         }
-        user.id = dbUser._id.toString()
-        user.role = dbUser.role || "user"
       }
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      if (user) {
-        token.id = user.id
-        token.name = user.name
-        token.email = user.email
-        token.role = (user as any).role || "user"
+      const tokenId = token.id ? String(token.id) : ""
+      if (user || !tokenId || tokenId.length !== 24) {
+        await connectDb()
+        const email = (user?.email || token?.email)?.trim().toLowerCase()
+        if (email) {
+          const dbUser = await User.findOne({ email })
+          if (dbUser) {
+            token.id = dbUser._id.toString()
+            token.role = dbUser.role || "user"
+            token.name = dbUser.name
+            token.email = dbUser.email
+          }
+        }
       }
+
       if (trigger === "update" && session?.role) {
         token.role = session.role
       }

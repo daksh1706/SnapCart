@@ -19,13 +19,25 @@ async function Home(props: {
   const searchParams = await props.searchParams;
 
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.email && !session?.user?.id) {
     redirect("/login");
   }
 
   await connectDb();
 
-  const userDoc = await User.findById(session.user.id);
+  let userDoc = null;
+  if (session.user.id && session.user.id.length === 24) {
+    try {
+      userDoc = await User.findById(session.user.id);
+    } catch (e) {
+      userDoc = null;
+    }
+  }
+
+  if (!userDoc && session.user.email) {
+    userDoc = await User.findOne({ email: session.user.email.toLowerCase() });
+  }
+
   if (!userDoc) {
     redirect("/login");
   }
