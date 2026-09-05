@@ -26,13 +26,24 @@ function RegisterForm({ previousStep }: propType) {
         setErrorMessage("")
         setLoading(true)
         try {
+            const normalizedEmail = email.trim().toLowerCase()
             await axios.post("/api/auth/register", {
                 name: name.trim(),
-                email: email.trim().toLowerCase(),
+                email: normalizedEmail,
                 password
             })
-            router.push("/login")
-            setLoading(false)
+            // Immediately log in with the new account and go straight inside the app!
+            const loginRes = await signIn("credentials", {
+                email: normalizedEmail,
+                password,
+                redirect: false
+            })
+            if (loginRes?.ok) {
+                router.push("/")
+                router.refresh()
+            } else {
+                router.push("/login")
+            }
         } catch (error: any) {
             console.error("Registration error:", error)
             setErrorMessage(error?.response?.data?.message || "Registration failed. Please try again.")

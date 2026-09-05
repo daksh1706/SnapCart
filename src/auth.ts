@@ -22,7 +22,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Email and password are required")
         }
 
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ email }).lean()
         if (!user) {
           throw new Error("User doesn't exist")
         }
@@ -34,7 +34,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Incorrect password")
         }
         return {
-          id: user._id.toString(),
+          id: (user as any)._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role || "user"
@@ -47,37 +47,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        await connectDb()
-        const email = user.email?.trim().toLowerCase()
-        if (!email) return false
-
-        let dbUser = await User.findOne({ email })
-        if (!dbUser) {
-          dbUser = await User.create({
-            name: user.name || "User",
-            email: email,
-            image: user.image || "",
-            role: "user"
-          })
-        }
-      }
+    async signIn() {
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      const tokenId = token.id ? String(token.id) : ""
-      if (user || !tokenId || tokenId.length !== 24) {
-        await connectDb()
-        const email = (user?.email || token?.email)?.trim().toLowerCase()
+      if (user) {
+        const email = user.email?.trim().toLowerCase()
         if (email) {
-          const dbUser = await User.findOne({ email })
-          if (dbUser) {
-            token.id = dbUser._id.toString()
-            token.role = dbUser.role || "user"
-            token.name = dbUser.name
-            token.email = dbUser.email
+          await connectDb()
+          let dbUser = await User.findOne({ email })
+          if (!dbUser) {
+            dbUser = await User.create({
+              name: user.name || "User",
+              email: email,
+              image: user.image || "",
+              role: "user"
+            })
           }
+          token.id = dbUser._id.toString()
+          token.role = dbUser.role || "user"
+          token.name = dbUser.name
+          token.email = dbUser.email
         }
       }
 
@@ -88,10 +78,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = (token.id || token.sub) as string
         session.user.name = token.name as string
         session.user.email = token.email as string
-        session.user.role = token.role as string
+        session.user.role = (token.role || "user") as string
       }
       return session
     },
@@ -106,4 +96,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 })
-

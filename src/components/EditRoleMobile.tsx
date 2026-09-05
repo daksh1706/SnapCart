@@ -18,9 +18,9 @@ function EditRoleMobile() {
     const router = useRouter()
     const handleEdit = async () => {
         try {
-            const result = await axios.post("/api/user/edit-role-mobile",{role:selectedRole,mobile})
+            await axios.post("/api/user/edit-role-mobile",{role:selectedRole,mobile})
             await update({role:selectedRole})
-            router.push("/")
+            window.location.href = "/"
         } catch (error) {
             console.log(error)
         }
