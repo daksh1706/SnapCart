@@ -43,7 +43,7 @@ function HeroSection() {
     }, [slides.length])
 
     return (
-        <div className='relative w-[98%] mx-auto mt-32 h-[80vh] rounded-3xl overflow-hidden shadow-2xl '>
+        <div className='relative w-[98%] max-w-7xl mx-auto mt-4 sm:mt-6 h-[60vh] sm:h-[75vh] rounded-3xl overflow-hidden shadow-2xl '>
             <AnimatePresence mode='wait'>
                 <motion.div
                     key={current}

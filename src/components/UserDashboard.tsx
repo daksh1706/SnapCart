@@ -67,9 +67,6 @@ function UserDashboard({ groceryList }: { groceryList: IGrocery[] }) {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
-      {/* Top Flash Deals Countdown Ticker */}
-      <FlashDealBanner />
-
       {/* Hero Section */}
       <HeroSection />
 

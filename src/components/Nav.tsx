@@ -1,5 +1,8 @@
 "use client";
-import { Boxes, ClipboardCheck, Heart, LogOut, Menu, Package, PlusCircle, Search, ShoppingCartIcon, User, X, ShoppingBag } from "lucide-react";
+import {
+  Boxes, ClipboardCheck, Heart, LogOut, Menu, Package, PlusCircle, Search,
+  ShoppingCartIcon, User, X, Users, UserCheck, Settings, MapPin
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/redux/store";
 import { useRouter } from "next/navigation";
 import WishlistDrawer from "./WishlistDrawer";
-import { addToCart } from "@/redux/cartSlice";
+import FlashDealBanner from "./FlashDealBanner";
 
 interface IUser {
   _id?: string;
@@ -34,7 +37,6 @@ function Nav({ user }: { user: IUser }) {
   const { items: wishlistItems } = useSelector((state: RootState) => state.wishlist);
   const [search, setSearch] = useState("");
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -89,6 +91,9 @@ function Nav({ user }: { user: IUser }) {
           <Link href={"/admin/manage-orders"} className="flex items-center gap-3 p-3 rounded-xl bg-white/10 hover:bg-white/20 hover:pl-4 transition-all" onClick={() => setMenuOpen(false)}>
             <ClipboardCheck className="w-5 h-5 text-emerald-300" /> Manage Orders
           </Link>
+          <Link href={"/admin/manage-users"} className="flex items-center gap-3 p-3 rounded-xl bg-white/10 hover:bg-white/20 hover:pl-4 transition-all" onClick={() => setMenuOpen(false)}>
+            <Users className="w-5 h-5 text-emerald-300" /> Manage Users & Staff
+          </Link>
         </div>
         <div className="my-5 border-t border-white/20"></div>
         <div
@@ -114,12 +119,16 @@ function Nav({ user }: { user: IUser }) {
   };
 
   return (
-    <>
-      <div className="w-[95%] max-w-7xl fixed top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-700 rounded-2xl shadow-xl shadow-emerald-950/20 flex justify-between items-center h-18 px-4 md:px-7 z-50 border border-white/15 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full flex flex-col items-center bg-white/70 backdrop-blur-md transition-all shadow-xs">
+      {/* Flash Deals Banner for Customers */}
+      {user.role === "user" && <FlashDealBanner />}
+
+      {/* Main Navbar Bar */}
+      <div className="w-[95%] max-w-7xl mx-auto my-2.5 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-700 rounded-2xl shadow-lg shadow-emerald-950/20 flex justify-between items-center h-18 px-4 md:px-7 border border-white/15">
         {/* Brand Logo */}
         <Link
           href={"/"}
-          className="text-white font-black text-2xl sm:text-3xl tracking-tight hover:scale-103 transition-transform flex items-center gap-1.5"
+          className="text-white font-black text-2xl sm:text-3xl tracking-tight hover:scale-103 transition-transform flex items-center gap-1.5 shrink-0"
         >
           <span className="bg-white text-emerald-700 rounded-xl px-2 py-0.5 shadow-xs font-black">Snap</span>
           <span className="text-white font-extrabold tracking-wide">Cart</span>
@@ -144,7 +153,7 @@ function Nav({ user }: { user: IUser }) {
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="text-gray-400 hover:text-gray-600 p-0.5"
+                  className="text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -154,7 +163,7 @@ function Nav({ user }: { user: IUser }) {
         )}
 
         {/* Action Items */}
-        <div className="flex items-center gap-2.5 md:gap-4 relative">
+        <div className="flex items-center gap-2.5 md:gap-4 relative shrink-0">
           {user.role === "user" && (
             <>
               {/* Mobile Search Toggle */}
@@ -198,28 +207,34 @@ function Nav({ user }: { user: IUser }) {
           {/* Admin Navigation */}
           {user.role === "admin" && (
             <>
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
                 <Link
                   href={"/admin/add-grocery"}
                   className="flex items-center gap-1.5 bg-white/95 text-emerald-800 font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-white hover:scale-102 transition-all shadow-xs"
                 >
-                  <PlusCircle className="w-4 h-4 text-emerald-600" /> Add Grocery
+                  <PlusCircle className="w-4 h-4 text-emerald-600" /> Add Item
                 </Link>
                 <Link
                   href={"/admin/view-grocery"}
                   className="flex items-center gap-1.5 bg-white/95 text-emerald-800 font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-white hover:scale-102 transition-all shadow-xs"
                 >
-                  <Boxes className="w-4 h-4 text-emerald-600" /> View Grocery
+                  <Boxes className="w-4 h-4 text-emerald-600" /> Groceries
                 </Link>
                 <Link
                   href={"/admin/manage-orders"}
                   className="flex items-center gap-1.5 bg-white/95 text-emerald-800 font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-white hover:scale-102 transition-all shadow-xs"
                 >
-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Manage Orders
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Orders
+                </Link>
+                <Link
+                  href={"/admin/manage-users"}
+                  className="flex items-center gap-1.5 bg-white/95 text-emerald-800 font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-white hover:scale-102 transition-all shadow-xs"
+                >
+                  <Users className="w-4 h-4 text-emerald-600" /> Users & Staff
                 </Link>
               </div>
               <div
-                className="md:hidden bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md cursor-pointer"
+                className="lg:hidden bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md cursor-pointer"
                 onClick={() => setMenuOpen((prev) => !prev)}
               >
                 <Menu className="text-emerald-700 w-5 h-5" />
@@ -247,7 +262,7 @@ function Nav({ user }: { user: IUser }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute right-0 mt-3 w-60 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-999"
+                  className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-999"
                 >
                   <div className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 bg-emerald-50/50 rounded-xl mb-1">
                     <div className="w-9 h-9 relative rounded-full bg-emerald-100 flex items-center justify-center overflow-hidden shrink-0">
@@ -262,6 +277,15 @@ function Nav({ user }: { user: IUser }) {
                       <div className="text-[11px] text-emerald-700 font-semibold capitalize">{user.role}</div>
                     </div>
                   </div>
+
+                  {/* Profile Link for User / Delivery Partner */}
+                  <Link
+                    href={user.role === "deliveryBoy" ? "/delivery/profile" : "/user/profile"}
+                    className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-emerald-50 rounded-xl text-gray-700 text-xs font-semibold transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    <Settings className="w-4 h-4 text-emerald-600" /> My Profile & Security
+                  </Link>
 
                   {user.role === "user" && (
                     <>
@@ -284,6 +308,16 @@ function Nav({ user }: { user: IUser }) {
                     </>
                   )}
 
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin/manage-users"
+                      className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-emerald-50 rounded-xl text-gray-700 text-xs font-semibold transition-colors"
+                      onClick={() => setOpen(false)}
+                    >
+                      <Users className="w-4 h-4 text-emerald-600" /> Manage Users & Staff
+                    </Link>
+                  )}
+
                   <button
                     className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 hover:bg-red-50 rounded-xl text-red-600 text-xs font-bold transition-colors cursor-pointer mt-1"
                     onClick={() => {
@@ -298,8 +332,9 @@ function Nav({ user }: { user: IUser }) {
             </AnimatePresence>
           </div>
         </div>
-        {sideBar}
       </div>
+
+      {sideBar}
 
       {/* Mobile Search Overlay */}
       <AnimatePresence>
@@ -309,7 +344,7 @@ function Nav({ user }: { user: IUser }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 w-[92%] max-w-lg bg-white rounded-2xl shadow-2xl z-40 p-3 border border-gray-100 md:hidden"
+            className="w-[92%] max-w-lg bg-white rounded-2xl shadow-2xl z-40 p-3 mb-2 border border-gray-100 md:hidden"
           >
             <form className="flex items-center gap-2" onSubmit={handleSearch}>
               <Search className="text-gray-400 w-5 h-5 shrink-0" />
@@ -335,7 +370,7 @@ function Nav({ user }: { user: IUser }) {
 
       {/* Wishlist Drawer */}
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
-    </>
+    </header>
   );
 }
 

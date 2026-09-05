@@ -1,5 +1,16 @@
 import mongoose from "mongoose";
 
+export interface ISavedAddress {
+    _id?: mongoose.Types.ObjectId;
+    fullName: string;
+    mobile: string;
+    city: string;
+    state: string;
+    pincode: string;
+    fullAddress: string;
+    isDefault?: boolean;
+}
+
 export interface IUser {
     _id?: mongoose.Types.ObjectId;
     name: string;
@@ -14,6 +25,7 @@ export interface IUser {
     };
     socketId?: string | null;
     isOnline?: boolean;
+    savedAddresses?: ISavedAddress[];
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -63,7 +75,18 @@ const userSchema = new mongoose.Schema<IUser>(
         isOnline: {
             type: Boolean,
             default: false
-        }
+        },
+        savedAddresses: [
+            {
+                fullName: { type: String, required: true },
+                mobile: { type: String, required: true },
+                city: { type: String, required: true },
+                state: { type: String, required: true },
+                pincode: { type: String, required: true },
+                fullAddress: { type: String, required: true },
+                isDefault: { type: Boolean, default: false }
+            }
+        ]
     },
     { timestamps: true }
 );
