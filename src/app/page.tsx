@@ -6,10 +6,10 @@ import Footer from "@/components/Footer";
 import GeoUpdater from "@/components/GeoUpdater";
 import Nav from "@/components/Nav";
 import UserDashboard from "@/components/UserDashboard";
+import LandingPage from "@/components/LandingPage";
 import connectDb from "@/lib/db";
 import User from "@/models/user.model";
 import Grocery from "@/models/grocery.model";
-import { redirect } from "next/navigation";
 
 async function Home(props: {
   searchParams: Promise<{
@@ -20,7 +20,7 @@ async function Home(props: {
 
   const session = await auth();
   if (!session?.user?.email && !session?.user?.id) {
-    redirect("/login");
+    return <LandingPage />;
   }
 
   await connectDb();
@@ -39,7 +39,7 @@ async function Home(props: {
   }
 
   if (!userDoc) {
-    redirect("/login");
+    return <LandingPage />;
   }
 
   const user = JSON.parse(JSON.stringify(userDoc));
