@@ -2,6 +2,7 @@
 import { motion } from "framer-motion"
 import { Facebook, Instagram, Mail, MapPin, Phone, TwitterIcon } from "lucide-react"
 import Link from "next/link"
+import SnapCartLogo from "./SnapCartLogo"
 
 function Footer() {
   return (
@@ -10,14 +11,14 @@ function Footer() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
-      className="bg-linear-to-r from-green-600 to-green-700 text-white mt-20"
+      className="bg-linear-to-r from-emerald-700 via-green-700 to-teal-800 text-white mt-20"
     >
       <div className="w-[90%] md:w-[80%] mx-auto py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-b border-green-500/40 pb-10">
           
           {/* Brand Section */}
           <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold">SnapCart</h2>
+            <SnapCartLogo variant="light" size="md" showBadge />
             <p className="text-sm text-green-100 leading-relaxed max-w-xs">
               Your one-stop online grocery store delivering freshness to your doorstep.
               Shop smart, eat fresh, and save more every day!

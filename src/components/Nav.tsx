@@ -14,6 +14,7 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { useRouter } from "next/navigation";
 import WishlistDrawer from "./WishlistDrawer";
 import FlashDealBanner from "./FlashDealBanner";
+import SnapCartLogo from "./SnapCartLogo";
 
 interface IUser {
   _id?: string;
@@ -128,10 +129,9 @@ function Nav({ user }: { user: IUser }) {
         {/* Brand Logo */}
         <Link
           href={"/"}
-          className="text-white font-black text-2xl sm:text-3xl tracking-tight hover:scale-103 transition-transform flex items-center gap-1.5 shrink-0"
+          className="hover:scale-105 active:scale-98 transition-all shrink-0 group flex items-center"
         >
-          <span className="bg-white text-emerald-700 rounded-xl px-2 py-0.5 shadow-xs font-black">Snap</span>
-          <span className="text-white font-extrabold tracking-wide">Cart</span>
+          <SnapCartLogo variant="light" size="md" />
         </Link>
 
         {/* Desktop Search Bar */}

@@ -2,6 +2,7 @@
 import React from 'react'
 import { motion } from "framer-motion"
 import { ArrowRight, Bike, ShoppingBasket } from 'lucide-react'
+import SnapCartLogo from './SnapCartLogo'
 type propType = {
     nextStep:(s:number) => void
 }
@@ -20,10 +21,9 @@ function Welcome({nextStep}:propType) {
         transition={{
             duration:0.6
         }}
-        className='flex items-center gap-3'
+        className='flex items-center justify-center'
         >
-             <ShoppingBasket className='w-10 h-10 text-green-600' />
-            <h1 className='text-4xl md:text-5xl font-extrabold text-green-700'>SnapCart</h1>
+             <SnapCartLogo variant="dark" size="xl" showBadge />
         </motion.div>
         
         <motion.p
